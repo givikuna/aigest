@@ -8,7 +8,7 @@
   git,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "aigest";
   version = "0.1.0";
 
