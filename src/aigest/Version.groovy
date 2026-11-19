@@ -11,7 +11,7 @@ final class Version {
     private Version() { }
 
     static String banner() {
-        return "${NAME} v${NUMBER}"
+        "${NAME} v${NUMBER}"
     }
 
 }

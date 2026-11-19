@@ -3,6 +3,33 @@
     "rules": {
         "NglParseError": {
             "enabled": false
-        }
+        },
+        "convention.TrailingComma": "on",
+        "unnecessary.UnnecessaryReturnKeyword": "on",
+        "formatting.SpaceAroundMapEntryColon": "off",
+        "formatting.Indentation": {
+            "spacesPerIndentLevel": 4,
+            "severity": "info"
+        },
+        "comments.ClassJavadoc": "off",
+        "CouldBeElvis": "off",
+        "CouldBeSwitchStatement": "off",
+        "VariableName": {
+            "severity": "info"
+        },
+        "UnnecessaryParenthesesForMethodCallWithClosure": "on",
+        "UnnecessarySemicolon": "on",
+        "UnnecessaryGString": "on",
+        "SpaceAfterWhile": "on",
+        "SpaceBeforeClosingBrace": "on",
+        "SpaceAfterComma": "on",
+        "IfStatementBraces": "off",
+        "ConsecutiveBlankLines": "off",
+        "BracesForForLoop": "off",
+        "ExplicitLinkedListInstantiation": "on",
+        "FileEndsWithoutNewline": "off",
+        "DuplicateImport": "off",
+        "IndentationClosingBraces": "on",
+        "MisorderedStaticImports": "on"
     }
 }
