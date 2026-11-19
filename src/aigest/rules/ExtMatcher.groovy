@@ -12,6 +12,8 @@ final class ExtMatcher {
 
         boolean isIgnoreAll()
 
+        boolean matches(String normalizedRelPath, String fileName)
+
     }
 
     static final class ExtIgnore implements ExtRule {
@@ -21,7 +23,14 @@ final class ExtMatcher {
         private ExtIgnore() { }
 
         @Override
-        boolean isIgnoreAll() { return true }
+        boolean isIgnoreAll() {
+            true
+        }
+
+        @Override
+        boolean matches(String normalizedRelPath, String fileName) {
+            true
+        }
 
     }
 
@@ -36,26 +45,43 @@ final class ExtMatcher {
             Map<String, RegexSet> ignoreAllRegexIn,
             RegexSet ignoreAllRegex
         ) {
-            List<String> normDirs = new ArrayList<String>()
-            if (ignoreAllIn != null) {
-                for (String d : ignoreAllIn) {
-                    normDirs.add(PathUtils.normalizeRelPath(d))
-                }
-            }
+            List<String> normDirs = ignoreAllIn != null
+                ? ignoreAllIn.collect { String d -> PathUtils.normalizeRelPath(d) }
+                : Collections.<String>emptyList()
             this.ignoreAllIn = Collections.unmodifiableList(normDirs)
 
             Map<String, RegexSet> normRegexMap = new LinkedHashMap<String, RegexSet>()
             if (ignoreAllRegexIn != null) {
-                for (Map.Entry<String, RegexSet> entry : ignoreAllRegexIn.entrySet()) {
-                    normRegexMap.put(PathUtils.normalizeRelPath(entry.key), entry.value)
+                ignoreAllRegexIn.each { String k, RegexSet v ->
+                    normRegexMap.put(PathUtils.normalizeRelPath(k), v ?: RegexSet.EMPTY)
                 }
             }
             this.ignoreAllRegexIn = Collections.unmodifiableMap(normRegexMap)
-            this.ignoreAllRegex = ignoreAllRegex != null ? ignoreAllRegex : RegexSet.EMPTY
+            this.ignoreAllRegex = ignoreAllRegex ?: RegexSet.EMPTY
         }
 
         @Override
-        boolean isIgnoreAll() { return false }
+        boolean isIgnoreAll() {
+            false
+        }
+
+        @Override
+        boolean matches(String normalizedRelPath, String fileName) {
+            boolean inIgnoredDir = ignoreAllIn.any { String dirPrefix ->
+                PathUtils.isInsideDir(normalizedRelPath, dirPrefix)
+            }
+            if (inIgnoredDir) return true
+
+            if (ignoreAllRegex.matchesAny(fileName) ||
+                ignoreAllRegex.matchesAny(normalizedRelPath)) {
+                return true
+            }
+
+            ignoreAllRegexIn.any { String dirKey, RegexSet rs ->
+                PathUtils.isInsideDir(normalizedRelPath, dirKey) &&
+                    (rs.matchesAny(fileName) || rs.matchesAny(normalizedRelPath))
+            }
+        }
 
     }
 
@@ -65,46 +91,9 @@ final class ExtMatcher {
         String fileName,
         String normalizedExt
     ) {
-        if (rulesByExt == null || normalizedExt.isEmpty()) {
-            return false
-        }
-
+        if (rulesByExt == null || normalizedExt.isEmpty()) return false
         ExtRule rule = rulesByExt.get(normalizedExt)
-
-        if (rule == null) {
-            return false
-        }
-
-        if (rule instanceof ExtIgnore) {
-            return true
-        }
-
-        if (rule instanceof ExtAllow) {
-            ExtAllow allow = (ExtAllow) rule
-
-            for (String dirPrefix : allow.ignoreAllIn) {
-                if (PathUtils.isInsideDir(normalizedRelPath, dirPrefix)) {
-                    return true
-                }
-            }
-
-            if (allow.ignoreAllRegex.matchesAny(fileName) ||
-                allow.ignoreAllRegex.matchesAny(normalizedRelPath)) {
-                return true
-            }
-
-            for (Map.Entry<String, RegexSet> entry : allow.ignoreAllRegexIn.entrySet()) {
-                if (PathUtils.isInsideDir(normalizedRelPath, entry.key)) {
-                    RegexSet rs = entry.value
-
-                    if (rs.matchesAny(fileName) || rs.matchesAny(normalizedRelPath)) {
-                        return true
-                    }
-                }
-            }
-        }
-
-        false
+        rule != null && rule.matches(normalizedRelPath, fileName)
     }
 
 }

@@ -1,7 +1,6 @@
 package aigest.rules
 
 import aigest.util.PathUtils
-
 import groovy.transform.CompileStatic
 
 @CompileStatic
@@ -13,6 +12,13 @@ final class DirMatcher {
 
         boolean isIgnoreAll()
 
+        boolean matchesFile(
+            String normalizedRelPath,
+            String fileName,
+            String normalizedExt,
+            int depth
+        )
+
     }
 
     static final class DirIgnore implements DirRule {
@@ -22,7 +28,19 @@ final class DirMatcher {
         private DirIgnore() { }
 
         @Override
-        boolean isIgnoreAll() { return true }
+        boolean isIgnoreAll() {
+            true
+        }
+
+        @Override
+        boolean matchesFile(
+            String normalizedRelPath,
+            String fileName,
+            String normalizedExt,
+            int depth
+        ) {
+            true
+        }
 
     }
 
@@ -38,15 +56,15 @@ final class DirMatcher {
             Map<Integer, RegexSet> depthRegex
         ) {
             Set<String> normExts = new LinkedHashSet<String>()
-
             if (ignoreAllOfExt != null) {
-                for (String ext : ignoreAllOfExt) {
-                    normExts.add(PathUtils.normalizeExt(ext))
+                ignoreAllOfExt.each { String ext ->
+                    String norm = PathUtils.normalizeExt(ext)
+                    if (!norm.isEmpty()) normExts.add(norm)
                 }
             }
 
             this.ignoreAllOfExt = Collections.unmodifiableSet(normExts)
-            this.unboundedRegex = unboundedRegex != null ? unboundedRegex : RegexSet.EMPTY
+            this.unboundedRegex = unboundedRegex ?: RegexSet.EMPTY
             this.depthRegex = depthRegex != null
                 ? Collections.unmodifiableMap(new LinkedHashMap<Integer, RegexSet>(depthRegex))
                 : Collections.<Integer, RegexSet>emptyMap()
@@ -57,20 +75,46 @@ final class DirMatcher {
             false
         }
 
-    }
-
-    static boolean isDirectoryIgnored(Map<String, DirRule> rulesByDir, String normalizedDirRelPath) {
-        if (rulesByDir == null) return false
-
-        for (Map.Entry<String, DirRule> entry : rulesByDir.entrySet()) {
-            String ruleDir = entry.key
-            DirRule rule = entry.value
-            if (rule instanceof DirIgnore && PathUtils.isInsideDir(normalizedDirRelPath, ruleDir)) {
+        @Override
+        boolean matchesFile(
+            String normalizedRelPath,
+            String fileName,
+            String normalizedExt,
+            int depth
+        ) {
+            if (!normalizedExt.isEmpty() && ignoreAllOfExt.contains(normalizedExt)) {
                 return true
+            }
+
+            if (unboundedRegex.matchesAny(fileName) ||
+                unboundedRegex.matchesAny(normalizedRelPath)) {
+                return true
+            }
+
+            depthRegex.any { Integer maxDepth, RegexSet rs ->
+                depth <= maxDepth.intValue() &&
+                    (rs.matchesAny(fileName) || rs.matchesAny(normalizedRelPath))
             }
         }
 
-        false
+    }
+
+    static boolean isDirectoryIgnored(
+        Map<String, DirRule> rulesByDir,
+        String normalizedDirRelPath
+    ) {
+        if (rulesByDir == null || rulesByDir.isEmpty()) return false
+
+        Map.Entry<String, DirRule> deepest = mostSpecificRule(rulesByDir, normalizedDirRelPath)
+        if (deepest == null || !deepest.value.isIgnoreAll()) return false
+
+        boolean hasNestedAllow = rulesByDir.any { String ruleDir, DirRule rule ->
+            !rule.isIgnoreAll() &&
+                ruleDir != normalizedDirRelPath &&
+                PathUtils.isInsideDir(ruleDir, normalizedDirRelPath)
+        }
+
+        !hasNestedAllow
     }
 
     static boolean shouldIgnore(
@@ -79,48 +123,39 @@ final class DirMatcher {
         String fileName,
         String normalizedExt
     ) {
-        if (rulesByDir == null || rulesByDir.isEmpty()) {
-            return false
+        if (rulesByDir == null || rulesByDir.isEmpty()) return false
+
+        Map.Entry<String, DirRule> deepest = mostSpecificRule(rulesByDir, normalizedRelPath)
+        if (deepest != null && deepest.value.isIgnoreAll()) {
+            return true
         }
 
-        for (Map.Entry<String, DirRule> entry : rulesByDir.entrySet()) {
-            String dirKey = entry.key
-            DirRule rule = entry.value
+        int minActiveLength = deepest != null ? deepest.key.length() : -1
 
-            int depth = PathUtils.relativeDepthInDir(normalizedRelPath, dirKey)
-            if (depth < 0) {
-                continue
+        int deepestIgnoreLen = rulesByDir.entrySet()
+            .findAll { Map.Entry<String, DirRule> e ->
+                e.value.isIgnoreAll() && PathUtils.isInsideDir(normalizedRelPath, e.key)
             }
+            .collect { Map.Entry<String, DirRule> e -> e.key.length() }
+            .max() ?: -1
 
-            if (rule instanceof DirIgnore) {
-                return true
-            }
-
-            if (rule instanceof DirAllow) {
-                DirAllow allow = (DirAllow) rule
-
-                if (!normalizedExt.isEmpty() && allow.ignoreAllOfExt.contains(normalizedExt)) {
-                    return true
-                }
-
-                if (allow.unboundedRegex.matchesAny(fileName) ||
-                    allow.unboundedRegex.matchesAny(normalizedRelPath)) {
-                    return true
-                }
-
-                for (Map.Entry<Integer, RegexSet> depthEntry : allow.depthRegex.entrySet()) {
-                    int allowedDepth = depthEntry.key
-                    if (depth <= allowedDepth) {
-                        RegexSet rs = depthEntry.value
-                        if (rs.matchesAny(fileName) || rs.matchesAny(normalizedRelPath)) {
-                            return true
-                        }
-                    }
-                }
-            }
+        rulesByDir.entrySet().any { Map.Entry<String, DirRule> entry ->
+            if (entry.value.isIgnoreAll()) return false
+            if (entry.key.length() < deepestIgnoreLen && minActiveLength >= 0) return false
+            int depth = PathUtils.relativeDepthInDir(normalizedRelPath, entry.key)
+            depth >= 0 && entry.value.matchesFile(normalizedRelPath, fileName, normalizedExt, depth)
         }
+    }
 
-        false
+    private static Map.Entry<String, DirRule> mostSpecificRule(
+        Map<String, DirRule> rulesByDir,
+        String normalizedRelPath
+    ) {
+        List> matching = rulesByDir.entrySet().findAll {
+            Map.Entry<String, DirRule> e -> PathUtils.isInsideDir(normalizedRelPath, e.key)
+        }
+        if (matching.isEmpty()) return null
+        matching.max { Map.Entry<String, DirRule> e -> e.key.length() }
     }
 
 }

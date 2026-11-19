@@ -9,7 +9,7 @@ final class PathUtils {
 
     private PathUtils() { }
 
-    static String normalizeRealPath(String rawPath) {
+    static String normalizeRelPath(String rawPath) {
         if (rawPath == null) return ''
 
         String cleaned = rawPath.trim().replace('\\', '/')
@@ -30,34 +30,38 @@ final class PathUtils {
     }
 
     static String normalizeExt(String rawExt) {
-        rawExt?.trim()?.toLowerCase()?.with {
-            it.startsWith('.')
-                ? it.substring(1)
-                : it
-        } ?: ''
+        if (rawExt == null) return ''
+        String trimmed = rawExt.trim().toLowerCase(Locale.ROOT)
+        trimmed.startsWith('.') ? trimmed.substring(1) : trimmed
+    }
+
+    static String fileNameOf(String normalizedRelPath) {
+        if (normalizedRelPath == null || normalizedRelPath.isEmpty()) return ''
+        int lastSlash = normalizedRelPath.lastIndexOf('/')
+        lastSlash >= 0 ? normalizedRelPath.substring(lastSlash + 1) : normalizedRelPath
     }
 
     static String extractExt(String fileName) {
-        filename?.lastIndexOf('.')?.with {
-            it <= 0 || it == fileName.length() - 1
-                ? ''
-                : fileName.substring(it + 1).toLowerCase()
-        }
+        if (fileName == null || fileName.isEmpty()) return ''
+        int dot = fileName.lastIndexOf('.')
+        (dot <= 0 || dot == fileName.length() - 1)
+            ? ''
+            : fileName.substring(dot + 1).toLowerCase(Locale.ROOT)
     }
 
-    static boolean isInsideDir(String normalizedFileRelPath, String normalizedDirKey) {
-        normalizedDirKey.isEmpty
-        ? true
-        : normalizedFileRelPath == normalizedDirKey
-          || normalizedFileRelPath.startsWith(normalizedDirKey + '/')
+    static boolean isInsideDir(String normalizedRelPath, String normalizedDirKey) {
+        if (normalizedDirKey.isEmpty()) return true
+        normalizedRelPath == normalizedDirKey ||
+            normalizedRelPath.startsWith(normalizedDirKey + '/')
     }
 
     static int relativeDepthInDir(String normalizedFileRelPath, String normalizedDirKey) {
         if (!isInsideDir(normalizedFileRelPath, normalizedDirKey)) return -1
+        if (normalizedFileRelPath == normalizedDirKey) return 0
 
         String remainder = normalizedDirKey.isEmpty()
-                           ? normalizedFileRelPath
-                           : normalizedFileRelPath.substring(normalizedDirKey.length() + 1)
+            ? normalizedFileRelPath
+            : normalizedFileRelPath.substring(normalizedDirKey.length() + 1)
 
         if (remainder.isEmpty()) return 0
 
@@ -72,11 +76,13 @@ final class PathUtils {
     }
 
     static String toNormalizedRelative(Path root, Path target) {
-        normalizeRelPath(root.toAbsolutePath()
-                         .normalize()
-                         .relativize(target.toAbsolutePath().normalize())
-                         .toString()
-                         .replace('\\', '/'))
+        normalizeRelPath(
+            root.toAbsolutePath()
+                .normalize()
+                .relativize(target.toAbsolutePath().normalize())
+                .toString()
+                .replace('\\', '/')
+        )
     }
 
 }
