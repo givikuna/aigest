@@ -17,17 +17,17 @@ abstract class Result<T, E> {
 
     static <T> Result<T, String> trying(String context, Closure<T> action) {
         try {
-            ok(action.call())
+            return Result.<T, String>ok(action.call())
         } catch (Exception ex) {
             String detail = ex.message ?: ex.class.simpleName
-            err("${context}: ${detail}")
+            return Result.<T, String>err("${context}: ${detail}")
         }
     }
 
     static <A, B, R, E> Result<R, E> zip(
         Result<A, E> left,
         Result<B, E> right,
-        Closure<R> combine,
+        Closure<R> combine
     ) {
         left.flatMap { A a ->
             right.map { B b ->

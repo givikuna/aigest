@@ -65,7 +65,7 @@ final class GitIgnoreFilter {
 
         for (IgnorePattern p : patterns) {
             if (p.regex.matcher(norm).matches()) {
-                ignore = !p.negated
+                ignored = !p.negated
             }
         }
 
