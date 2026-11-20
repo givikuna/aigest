@@ -3,6 +3,8 @@ package aigest.config
 import aigest.rules.DirMatcher.DirRule
 import aigest.rules.ExtMatcher.ExtRule
 
+import aigest.util.Result
+
 import groovy.transform.CompileStatic
 
 @CompileStatic
@@ -74,23 +76,22 @@ final class Config {
 
     }
 
-    static ResolvedConfig resolve(
+    static Result<ResolvedConfig, String> resolve(
         ConfigFile globalConfig,
         ConfigFile repoConfig,
         String requestedProfile
     ) {
-        ConfigFile safeGlobal = globalConfig != null ? globalConfig : ConfigFile.EMPTY
         ConfigFile safeRepo = repoConfig != null ? repoConfig : ConfigFile.EMPTY
+        ConfigFile safeGlobal = (safeRepo.overrideGlobal || globalConfig == null)
+            ? ConfigFile.EMPTY
+            : globalConfig
 
         if (requestedProfile == null || requestedProfile.trim().isEmpty()) {
-            if (safeRepo.overrideGlobal) {
-                return new ResolvedConfig('main', safeRepo.extRules, safeRepo.dirRules)
-            }
-            return new ResolvedConfig(
+            return Result.<ResolvedConfig, String>ok(new ResolvedConfig(
                 'main',
                 mergeMap(safeGlobal.extRules, safeRepo.extRules),
                 mergeMap(safeGlobal.dirRules, safeRepo.dirRules)
-            )
+            ))
         }
 
         String profileName = requestedProfile.trim()
@@ -98,16 +99,18 @@ final class Config {
         ProfileSpec globalProfile = safeGlobal.profiles.get(profileName)
 
         if (repoProfile == null && globalProfile == null) {
-            throw new IllegalArgumentException(
+            return Result.<ResolvedConfig, String>err(
                 "Profile '${profileName}' not found in repository aigest.json or global config."
             )
         }
 
         if (repoProfile != null) {
-            boolean shouldIgnoreGlobal = safeRepo.overrideGlobal || repoProfile.overrideGlobal
-            if (shouldIgnoreGlobal) {
-                return new ResolvedConfig(profileName, repoProfile.extRules, repoProfile.dirRules)
+            if (repoProfile.overrideGlobal) {
+                return Result.<ResolvedConfig, String>ok(
+                    new ResolvedConfig(profileName, repoProfile.extRules, repoProfile.dirRules)
+                )
             }
+
             Map<String, ExtRule> baseExt = globalProfile != null
                 ? mergeMap(safeGlobal.extRules, globalProfile.extRules)
                 : safeGlobal.extRules
@@ -115,22 +118,24 @@ final class Config {
                 ? mergeMap(safeGlobal.dirRules, globalProfile.dirRules)
                 : safeGlobal.dirRules
 
-            return new ResolvedConfig(
+            return Result.<ResolvedConfig, String>ok(new ResolvedConfig(
                 profileName,
                 mergeMap(baseExt, repoProfile.extRules),
                 mergeMap(baseDir, repoProfile.dirRules)
-            )
+            ))
         }
 
         if (globalProfile.overrideGlobal) {
-            return new ResolvedConfig(profileName, globalProfile.extRules, globalProfile.dirRules)
+            return Result.<ResolvedConfig, String>ok(
+                new ResolvedConfig(profileName, globalProfile.extRules, globalProfile.dirRules)
+            )
         }
 
-        new ResolvedConfig(
+        Result.<ResolvedConfig, String>ok(new ResolvedConfig(
             profileName,
             mergeMap(safeGlobal.extRules, globalProfile.extRules),
             mergeMap(safeGlobal.dirRules, globalProfile.dirRules)
-        )
+        ))
     }
 
     private static <K, V> Map<K, V> mergeMap(Map<K, V> base, Map<K, V> override) {

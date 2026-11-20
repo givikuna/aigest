@@ -5,9 +5,9 @@ import groovy.transform.CompileStatic
 @CompileStatic
 abstract class Result<T, E> {
 
-    private Result() {}
+    private Result() { }
 
-    static <T, E> Result<T, e> ok(T value) {
+    static <T, E> Result<T, E> ok(T value) {
         new Ok<T, E>(value)
     }
 
@@ -41,13 +41,13 @@ abstract class Result<T, E> {
 
         for (Result<T, E> item : results) {
             if (item instanceof Err) {
-                return err(((Err<T, E>) item).error)
+                return Result.<List<T>, E>err(((Err<T, E>) item).error)
             }
 
             acc.add(((Ok<T, E>) item).value)
         }
 
-        ok(Collections.unmodifiableList(acc))
+        Result.<List<T>, E>ok(Collections.unmodifiableList(acc))
     }
 
     abstract boolean isOk()
@@ -81,7 +81,7 @@ abstract class Result<T, E> {
 
         @Override
         <U> Result<U, E> map(Closure<U> fn) {
-            ok(fn.call(value))
+            Result.<U, E>ok(fn.call(value))
         }
 
         @Override
@@ -90,13 +90,13 @@ abstract class Result<T, E> {
         }
 
         @Override
-        <R> R fold(Closure<R> onErr, Closure<R>, onOk) {
+        <R> R fold(Closure<R> onErr, Closure<R> onOk) {
             onOk.call(value)
         }
 
         @Override
         <F> Result<T, F> mapError(Closure<F> fn) {
-            ok(value)
+            Result.<T, F>ok(value)
         }
 
         @Override
@@ -121,17 +121,17 @@ abstract class Result<T, E> {
 
         @Override
         <U> Result<U, E> map(Closure<U> fn) {
-            err(error)
+            Result.<U, E>err(error)
         }
 
         @Override
         <U> Result<U, E> flatMap(Closure<Result<U, E>> fn) {
-            err(error)
+            Result.<U, E>err(error)
         }
 
         @Override
         <F> Result<T, F> mapError(Closure<F> fn) {
-            err(fn.call(error))
+            Result.<T, F>err(fn.call(error))
         }
 
         @Override

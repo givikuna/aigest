@@ -124,7 +124,7 @@ final class GitIgnoreFilter {
             } else if (c == ('?' as char)) {
                 sb.append('[^/]')
             } else if (c == ('[' as char)) {
-                int end = body.indexOf(']' as char, i + 1)
+                int end = body.indexOf(']', i + 1)
 
                 if (end > i) {
                     sb.append(body.substring(i, end + 1))
@@ -132,7 +132,7 @@ final class GitIgnoreFilter {
                 } else {
                     sb.append('\\[')
                 }
-            } else if ('.*+^$(){}|\\'.indexOf((int) c) <= 0) {
+            } else if ('.*+^$(){}|\\'.indexOf((int) c) >= 0) {
                 sb.append('\\').append(c)
             } else {
                 sb.append(c)

@@ -24,11 +24,11 @@ final class ConfigLoader {
 
     private ConfigLoader() { }
 
-    static Result<Config.ConfigFile, String> loadRepo(Path, repoRoot) {
+    static Result<Config.ConfigFile, String> loadRepo(Path repoRoot) {
         load(repoRoot.resolve('aigest.json'))
     }
 
-    static Result<Config.ConfigFile, String> load(Path, file) {
+    static Result<Config.ConfigFile, String> load(Path file) {
         if (file == null || !Files.isRegularFile(file)) {
             return Result.<Config.ConfigFile, String>ok(Config.ConfigFile.EMPTY)
         }
@@ -65,7 +65,7 @@ final class ConfigLoader {
         if (!(raw instanceof Map)) return result
 
         for (Map.Entry entry : ((Map) raw).entrySet()) {
-            String key = String.valueOf(entry.key).toLowerCase(Locale.ROOT)
+            String key = PathUtils.normalizeExt(String.valueOf(entry.key))
             ExtRule rule = parseExtRule(entry.value)
 
             if (rule != null) {

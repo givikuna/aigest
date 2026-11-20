@@ -156,7 +156,7 @@ final class DirMatcher {
         Map<String, DirRule> rulesByDir,
         String normalizedRelPath
     ) {
-        List<Map.Entry<String, DirRule>> matching = rulesByDir.entrySet().findAll {
+        Set matching = rulesByDir.entrySet().findAll {
             Map.Entry<String, DirRule> e -> PathUtils.isInsideDir(normalizedRelPath, e.key)
         }
 

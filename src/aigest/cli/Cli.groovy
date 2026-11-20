@@ -111,7 +111,7 @@ final class Cli {
                 --no-logs             Exclude git commit logs from output
             -v, --version             Display version information
             -h, --help                Show this help message
-        '''
+        '''.stripIndent().trim()
     }
 
 }
