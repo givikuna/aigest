@@ -90,6 +90,11 @@ abstract class Result<T, E> {
         }
 
         @Override
+        <R> R fold(Closure<R> onErr, Closure<R>, onOk) {
+            onOk.call(value)
+        }
+
+        @Override
         <F> Result<T, F> mapError(Closure<F> fn) {
             ok(value)
         }

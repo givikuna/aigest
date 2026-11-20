@@ -1,6 +1,7 @@
 package aigest.rules
 
 import aigest.util.PathUtils
+
 import groovy.transform.CompileStatic
 
 @CompileStatic
@@ -106,6 +107,7 @@ final class DirMatcher {
         if (rulesByDir == null || rulesByDir.isEmpty()) return false
 
         Map.Entry<String, DirRule> deepest = mostSpecificRule(rulesByDir, normalizedDirRelPath)
+
         if (deepest == null || !deepest.value.isIgnoreAll()) return false
 
         boolean hasNestedAllow = rulesByDir.any { String ruleDir, DirRule rule ->
@@ -126,6 +128,7 @@ final class DirMatcher {
         if (rulesByDir == null || rulesByDir.isEmpty()) return false
 
         Map.Entry<String, DirRule> deepest = mostSpecificRule(rulesByDir, normalizedRelPath)
+
         if (deepest != null && deepest.value.isIgnoreAll()) {
             return true
         }
@@ -141,7 +144,9 @@ final class DirMatcher {
 
         rulesByDir.entrySet().any { Map.Entry<String, DirRule> entry ->
             if (entry.value.isIgnoreAll()) return false
+
             if (entry.key.length() < deepestIgnoreLen && minActiveLength >= 0) return false
+
             int depth = PathUtils.relativeDepthInDir(normalizedRelPath, entry.key)
             depth >= 0 && entry.value.matchesFile(normalizedRelPath, fileName, normalizedExt, depth)
         }
@@ -151,11 +156,15 @@ final class DirMatcher {
         Map<String, DirRule> rulesByDir,
         String normalizedRelPath
     ) {
-        List> matching = rulesByDir.entrySet().findAll {
+        List<Map.Entry<String, DirRule>> matching = rulesByDir.entrySet().findAll {
             Map.Entry<String, DirRule> e -> PathUtils.isInsideDir(normalizedRelPath, e.key)
         }
+
         if (matching.isEmpty()) return null
-        matching.max { Map.Entry<String, DirRule> e -> e.key.length() }
+
+        matching.max {
+            Map.Entry<String, DirRule> e -> e.key.length()
+        }
     }
 
 }
