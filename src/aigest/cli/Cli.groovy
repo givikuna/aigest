@@ -61,7 +61,7 @@ final class Cli {
                     includeGitLogs = false
                     break
                 case '--include-logs':
-                    includeGitLogs = af
+                    includeGitLogs = true
                     break
                 default:
                     if (arg.startsWith('-')) {
