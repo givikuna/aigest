@@ -84,8 +84,8 @@ The one at the root of your repo has a higher hierarchy than the one as a dotfil
 - `-o`, `--output <path>` - Path to write the generated XML file. Parent directories are created automatically
 - `d`, `--dir <path>` - Target directory root directory (`.` current directory)
 - `c`, `--global-config <path>` - Path to the global file `$XDG_CONFIG_HOME/aigest/aigest.json` (fallback: `~/.config/aigest/aigest.json`)
-- `--include-logs` - Include the last 50 Git commits in the output (enabled by Default)
-- `--no-logs` - Omit git commits from the output
+- `--include-logs` - Include the last 50 Git commits in the output
+- `--no-logs` - Omit git commits from the output (default)
 - `-v`, `--version` - Prints the version
 - `-h`, `--help` - Helps You, HOPEFULLY
 

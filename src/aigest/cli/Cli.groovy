@@ -14,7 +14,7 @@ final class Cli {
         Path repoRoot = Paths.get('.')
         Path outputFile = null
         Path globalConfig = CliOptions.defaultGlobalConfigPath()
-        boolean includeGitLogs = true
+        boolean includeGitLogs = false
         boolean showHelp = false
         boolean showVersion = false
 
@@ -61,7 +61,7 @@ final class Cli {
                     includeGitLogs = false
                     break
                 case '--include-logs':
-                    includeGitLogs = true
+                    includeGitLogs = af
                     break
                 default:
                     if (arg.startsWith('-')) {
@@ -107,8 +107,8 @@ final class Cli {
             -o, --output <path>       Output .xml file path (default: aigest-output.txt or aigest-<profile>.xml)
             -d, --dir <path>          Target repository root directory (default: current directory)
             -c, --global-config <p>   Global config path (default: ~/.config/aigest/aigest.json)
-                --include-logs        Include git commit logs in output (default: enabled)
-                --no-logs             Exclude git commit logs from output
+                --include-logs        Include git commit logs in output
+                --no-logs             Exclude git commit logs from output (default)
             -v, --version             Display version information
             -h, --help                Show this help message
         '''.stripIndent().trim()
