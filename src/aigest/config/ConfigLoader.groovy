@@ -139,7 +139,7 @@ final class ConfigLoader {
                     try {
                         depthMap.put(Integer.parseInt(k), RegexSet.fromStrings(patterns))
                     } catch (NumberFormatException ignored) {
-                    // handler
+                        // handler
                     }
                 }
             }

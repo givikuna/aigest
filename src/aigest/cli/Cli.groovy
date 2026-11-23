@@ -80,8 +80,8 @@ final class Cli {
 
         if (outputFile == null) {
             String defaultName = (profile != null && !profile.isEmpty())
-                ? "aigest-${profile}.txt"
-                : 'aigest-output.txt'
+                ? "aigest-${profile}.xml"
+                : 'aigest-output.xml'
             outputFile = repoRoot.resolve(defaultName)
         }
 
@@ -104,7 +104,7 @@ final class Cli {
             [profile]                 Optional profile name from aigest.json (runs main config if omitted)
 
             Options:
-            -o, --output <path>       Output .txt file path (default: aigest-output.txt or aigest-<profile>.txt)
+            -o, --output <path>       Output .xml file path (default: aigest-output.txt or aigest-<profile>.xml)
             -d, --dir <path>          Target repository root directory (default: current directory)
             -c, --global-config <p>   Global config path (default: ~/.config/aigest/aigest.json)
                 --include-logs        Include git commit logs in output (default: enabled)

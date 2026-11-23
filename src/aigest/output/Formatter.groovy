@@ -68,10 +68,6 @@ final class Formatter {
     static String format(IngestBundle bundle) {
         List<String> sections = new ArrayList<String>()
 
-        sections.add(
-            "This file is a merged representation of the entire codebase, combined into a single document by ${Version.NAME}.".toString()
-        )
-
         sections.add(renderFileSummary(bundle))
         sections.add(renderDirectoryStructure(bundle.entries))
         sections.add(renderFiles(bundle.entries))
@@ -86,7 +82,12 @@ final class Formatter {
             sections.add(logsSection)
         }
 
-        sections.join('\n\n') + '\n'
+        return '<?xml version="1.0" encoding="UTF-8"?>\n' +
+            '<aigest name="' + escapeXmlAttr(Version.NAME) +
+            '" version="' + escapeXmlAttr(Version.NUMBER) + '">\n' +
+            "This file is a merged representation of the entire codebase, combined into a single document by ${escapeXmlAttr(Version.NAME)}.\n\n" +
+            sections.join('\n\n') +
+            '\n</aigest>\n'
     }
 
     static String renderDirectoryStructure(List<FileEntry> entries) {
