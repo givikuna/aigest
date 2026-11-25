@@ -8,6 +8,8 @@ import aigest.rules.ExtMatcher.ExtAllow
 import aigest.rules.ExtMatcher.ExtIgnore
 import aigest.rules.ExtMatcher.ExtRule
 
+import aigest.rules.IncludeOnlyMatcher.IncludeOnlyRule
+
 import aigest.rules.RegexSet
 
 import aigest.util.PathUtils
@@ -51,12 +53,28 @@ final class ConfigLoader {
         Map<String, DirRule> dirRules = parseDirRules(root.get('dir'))
         Map<String, Config.ProfileSpec> profiles =
                                     parseProfiles(root.get('profiles'))
+        IncludeOnlyRule includeOnly   = parseIncludeOnly(root.get('includeOnly'))
 
         new Config.ConfigFile(
             overrideGlobal,
             extRules,
             dirRules,
-            profiles)
+            profiles,
+            includeOnly
+        )
+    }
+
+    private static IncludeOnlyRule parseIncludeOnly(Object raw) {
+        if (!(raw instanceof Map)) {
+            return IncludeOnlyRule.None.INSTANCE
+        }
+
+        Map m = (Map) raw
+
+        IncludeOnlyRule.of(
+            toStringList(m.get('dirs'))
+            toStringList(m.get('files'))
+        )
     }
 
     private static Map<String, ExtRule> parseExtRules(Object raw) {
@@ -150,31 +168,39 @@ final class ConfigLoader {
 
     private static Map<String, Config.ProfileSpec> parseProfiles(Object raw) {
         Map<String, Config.ProfileSpec> result = new LinkedHashMap<>()
-        if (!(raw instanceof Map)) return result
+
+        if (!(raw instanceof Map)) {
+            return result
+        }
 
         for (Map.Entry entry : ((Map) raw).entrySet()) {
-            if (!(entry.value instanceof Map)) continue
+            if (!(entry.value instanceof Map)) {
+                continue
+            }
+
             Map m = (Map) entry.value
 
             result.put(String.valueOf(entry.key), new Config.ProfileSpec(
                 truthy(m.get('override')),
                 parseExtRules(m.get('ext')),
-                parseDirRules(m.get('dir'))
+                parseDirRules(m.get('dir')),
+                parseIncludeOnly(m.get('includeOnly'))
             ))
         }
-        return result
+
+        result
     }
 
     private static boolean truthy(Object o) {
         o instanceof Boolean && (Boolean) o
     }
 
-    private static List<String> toStringList(Object raw) {
-        if (raw instanceof List) {
-            return ((List) raw).collect { Object o -> String.valueOf(o) }
-        }
-
-        return Collections.<String>emptyList()
+     private static List<String> toStringList(Object raw) {
+        raw instanceof List
+            ? ((List) raw)
+                .findAll { Object o -> o != null }
+                .collect { Object o -> String.valueOf(o) }
+            : Collections.<String>emptyList()
     }
 
     private static Map<String, RegexSet> toRegexSetMap(Object raw) {

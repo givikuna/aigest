@@ -35,10 +35,13 @@ final class CliOptions {
 
     static Path defaultGlobalConfigPath() {
         String xdgConfig = System.getenv('XDG_CONFIG_HOME')
+
         if (xdgConfig != null && !xdgConfig.trim().isEmpty()) {
             return Paths.get(xdgConfig, 'aigest', 'aigest.json')
         }
+
         String userHome = System.getProperty('user.home', '.')
+
         return Paths.get(userHome, '.config', 'aigest', 'aigest.json')
     }
 

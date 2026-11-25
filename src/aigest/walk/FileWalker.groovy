@@ -23,7 +23,7 @@ final class FileWalker {
         RuleEngine rules,
         GitIgnoreFilter gitignore
     ) {
-        return Result.<List<Path>>trying("walking ${repoRoot}") {
+        Result.<List<Path>>trying("walking ${repoRoot}") {
             List<Path> collected = new ArrayList<>()
 
             Files.walkFileTree(repoRoot, new SimpleFileVisitor<Path>() {
@@ -46,7 +46,8 @@ final class FileWalker {
                     if (rules.shouldSkipDirectory(rel)) {
                         return FileVisitResult.SKIP_SUBTREE
                     }
-                    return FileVisitResult.CONTINUE
+
+                    FileVisitResult.CONTINUE
                 }
 
                 @Override
@@ -58,12 +59,13 @@ final class FileWalker {
                     if (rules.shouldIgnoreFile(rel)) return FileVisitResult.CONTINUE
 
                     collected.add(file)
-                    return FileVisitResult.CONTINUE
+
+                    FileVisitResult.CONTINUE
                 }
 
                 @Override
                 FileVisitResult visitFileFailed(Path file, IOException exc) {
-                    return FileVisitResult.CONTINUE
+                    FileVisitResult.CONTINUE
                 }
 
             })
@@ -73,7 +75,7 @@ final class FileWalker {
                 PathUtils.toNormalizedRelative(repoRoot, b)
             }
 
-            return Collections.unmodifiableList(collected)
+            Collections.unmodifiableList(collected)
         }
     }
 

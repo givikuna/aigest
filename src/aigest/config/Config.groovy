@@ -2,6 +2,7 @@ package aigest.config
 
 import aigest.rules.DirMatcher.DirRule
 import aigest.rules.ExtMatcher.ExtRule
+import aigest.rules.IncludeOnlyMatcher.IncludeOnlyRule
 
 import aigest.util.Result
 
@@ -17,15 +18,18 @@ final class Config {
         final boolean overrideGlobal
         final Map<String, ExtRule> extRules
         final Map<String, DirRule> dirRules
+        final IncludeOnlyRule includeOnly
 
         ProfileSpec(
             boolean overrideGlobal,
             Map<String, ExtRule> extRules,
-            Map<String, DirRule> dirRules
+            Map<String, DirRule> dirRules,
+            IncludeOnlyRule includeOnly = IncludeOnlyRule.None.INSTANCE
         ) {
             this.overrideGlobal = overrideGlobal
             this.extRules = Collections.unmodifiableMap(new LinkedHashMap<String, ExtRule>(extRules))
             this.dirRules = Collections.unmodifiableMap(new LinkedHashMap<String, DirRule>(dirRules))
+            this.includeOnly = includeOnly ?: IncludeOnlyRule.None.INSTANCE
         }
 
     }
@@ -36,24 +40,28 @@ final class Config {
             false,
             Collections.<String, ExtRule>emptyMap(),
             Collections.<String, DirRule>emptyMap(),
-            Collections.<String, ProfileSpec>emptyMap()
+            Collections.<String, ProfileSpec>emptyMap(),
+            IncludeOnlyRule.None.INSTANCE
         )
 
         final boolean overrideGlobal
         final Map<String, ExtRule> extRules
         final Map<String, DirRule> dirRules
         final Map<String, ProfileSpec> profiles
+        final IncludeOnlyRule includeOnly
 
         ConfigFile(
             boolean overrideGlobal,
             Map<String, ExtRule> extRules,
             Map<String, DirRule> dirRules,
-            Map<String, ProfileSpec> profiles
+            Map<String, ProfileSpec> profiles,
+            IncludeOnlyRule includeOnly = IncludeOnlyRule.None.INSTANCE
         ) {
             this.overrideGlobal = overrideGlobal
             this.extRules = Collections.unmodifiableMap(new LinkedHashMap<String, ExtRule>(extRules))
             this.dirRules = Collections.unmodifiableMap(new LinkedHashMap<String, DirRule>(dirRules))
             this.profiles = Collections.unmodifiableMap(new LinkedHashMap<String, ProfileSpec>(profiles))
+            this.includeOnly = includeOnly ?: IncludeOnlyRule.None.INSTANCE
         }
 
     }
@@ -63,15 +71,18 @@ final class Config {
         final String activeProfile
         final Map<String, ExtRule> extRules
         final Map<String, DirRule> dirRules
+        final IncludeOnlyRule includeOnly
 
         ResolvedConfig(
             String activeProfile,
             Map<String, ExtRule> extRules,
-            Map<String, DirRule> dirRules
+            Map<String, DirRule> dirRules,
+            IncludeOnlyRule includeOnly = IncludeOnlyRule.None.INSTANCE
         ) {
             this.activeProfile = activeProfile
             this.extRules = Collections.unmodifiableMap(new LinkedHashMap<String, ExtRule>(extRules))
             this.dirRules = Collections.unmodifiableMap(new LinkedHashMap<String, DirRule>(dirRules))
+            this.includeOnly = includeOnly ?: IncludeOnlyRule.None.INSTANCE
         }
 
     }
@@ -90,7 +101,8 @@ final class Config {
             return Result.<ResolvedConfig, String>ok(new ResolvedConfig(
                 'main',
                 mergeMap(safeGlobal.extRules, safeRepo.extRules),
-                mergeMap(safeGlobal.dirRules, safeRepo.dirRules)
+                mergeMap(safeGlobal.dirRules, safeRepo.dirRules),
+                mergeIncludeOnly(safeGlobal.includeOnly, safeRepo.includeOnly)
             ))
         }
 
@@ -106,9 +118,12 @@ final class Config {
 
         if (repoProfile != null) {
             if (repoProfile.overrideGlobal) {
-                return Result.<ResolvedConfig, String>ok(
-                    new ResolvedConfig(profileName, repoProfile.extRules, repoProfile.dirRules)
-                )
+                return Result.<ResolvedConfig, String>ok(new ResolvedConfig(
+                    profileName,
+                    repoProfile.extRules,
+                    repoProfile.dirRules,
+                    repoProfile.includeOnly
+                ))
             }
 
             Map<String, ExtRule> baseExt = globalProfile != null
@@ -117,25 +132,42 @@ final class Config {
             Map<String, DirRule> baseDir = globalProfile != null
                 ? mergeMap(safeGlobal.dirRules, globalProfile.dirRules)
                 : safeGlobal.dirRules
+            IncludeOnlyRule baseIncludeOnly = globalProfile != null
+                ? mergeIncludeOnly(safeGlobal.includeOnly, globalProfile.includeOnly)
+                : safeGlobal.includeOnly
 
             return Result.<ResolvedConfig, String>ok(new ResolvedConfig(
                 profileName,
                 mergeMap(baseExt, repoProfile.extRules),
-                mergeMap(baseDir, repoProfile.dirRules)
+                mergeMap(baseDir, repoProfile.dirRules),
+                mergeIncludeOnly(baseIncludeOnly, repoProfile.includeOnly)
             ))
         }
 
         if (globalProfile.overrideGlobal) {
-            return Result.<ResolvedConfig, String>ok(
-                new ResolvedConfig(profileName, globalProfile.extRules, globalProfile.dirRules)
-            )
+            return Result.<ResolvedConfig, String>ok(new ResolvedConfig(
+                profileName,
+                globalProfile.extRules,
+                globalProfile.dirRules,
+                globalProfile.includeOnly
+            ))
         }
 
         Result.<ResolvedConfig, String>ok(new ResolvedConfig(
             profileName,
             mergeMap(safeGlobal.extRules, globalProfile.extRules),
-            mergeMap(safeGlobal.dirRules, globalProfile.dirRules)
+            mergeMap(safeGlobal.dirRules, globalProfile.dirRules),
+            mergeIncludeOnly(safeGlobal.includeOnly, globalProfile.includeOnly)
         ))
+    }
+
+    private static IncludeOnlyRule mergeIncludeOnly(
+        IncludeOnlyRule base,
+        IncludeOnlyRule override
+    ) {
+        override != null && override.isActive()
+            ? override
+            : base ?: IncludeOnlyRule.None.INSTANCE
     }
 
     private static <K, V> Map<K, V> mergeMap(Map<K, V> base, Map<K, V> override) {

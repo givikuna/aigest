@@ -121,14 +121,11 @@ final class IncludeOnlyMatcher {
 
             @Override
             boolean shouldSkipDirectory(String normalizedDirRelPath) {
-                if (normalizedDirRelPath.isEmpty()) {
-                    return false
-                }
-
-                String prefix = normalizedDirRelPath + '/'
-                !files.any { String incFile ->
-                    incFile.startsWith(prefix)
-                }
+                normalizedDirRelPath.isEmpty()
+                    ? false
+                    : !files.any { String incFile ->
+                        incFile.startsWith(normalizedDirRelPath + '/')
+                    }
             }
 
             @Override
