@@ -72,7 +72,7 @@ final class ConfigLoader {
         Map m = (Map) raw
 
         IncludeOnlyRule.of(
-            toStringList(m.get('dirs'))
+            toStringList(m.get('dirs')),
             toStringList(m.get('files'))
         )
     }
