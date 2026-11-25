@@ -265,15 +265,11 @@ final class Ingestor {
     }
 
     private static Result<Path, String> validateRepoRoot(Path repoRoot) {
-        if (repoRoot == null || !Files.exists(repoRoot)) {
-            return Result.<Path, String>err("Repository directory does not exist: ${repoRoot}")
-        }
-
-        if (!Files.isDirectory(repoRoot)) {
-            return Result.<Path, String>err("Target path is not a directory: ${repoRoot}")
-        }
-
-        Result.<Path, String>ok(repoRoot)
+        repoRoot == null || !Files.exists(repoRoot)
+            ? Result.<Path, String>err("Repository directory does not exist: ${repoRoot}")
+            : (!Files.isDirectory(repoRoot)
+                ? Result.<Path, String>err("Target path is not a directory: ${repoRoot}")
+                : Result.<Path, String>ok(repoRoot))
     }
 
     private static Result<ResolvedConfig, String> loadAndResolveConfig(
@@ -296,7 +292,10 @@ final class Ingestor {
         ResolvedConfig resolved
     ) {
         RuleEngine rules = RuleEngine.fromConfig(resolved)
-        GitIgnoreFilter gitignore = GitIgnoreFilter.load(repoRoot)
+
+        GitIgnoreFilter gitignore = rules.hasIncludeOnly()
+            ? GitIgnoreFilter.EMPTY
+            : GitIgnoreFilter.load(repoRoot)
         Path normalizedOutput = outputFile.toAbsolutePath().normalize()
 
         FileWalker.collect(repoRoot, rules, gitignore).flatMap { List<Path> paths ->
@@ -326,18 +325,16 @@ final class Ingestor {
     }
 
     private static GitLogs resolveGitLogs(Path repoRoot, boolean includeGitLogs) {
-        if (!includeGitLogs) {
-            return GitLogs.Disabled.INSTANCE
-        }
-
-        GitLogReader.read(repoRoot).<GitLogs>fold(
-            { String err -> (GitLogs) new GitLogs.Unavailable(err) },
-            { String logText ->
-                logText.isEmpty()
-                    ? (GitLogs) new GitLogs.Unavailable('no git commits found')
-                    : (GitLogs) new GitLogs.Available(logText)
-            }
-        )
+        !includeGitLogs
+            ? GitLogs.Disabled.INSTANCE
+            : GitLogReader.read(repoRoot).<GitLogs>fold(
+                { String err -> (GitLogs) new GitLogs.Unavailable(err) },
+                { String logText ->
+                    logText.isEmpty()
+                        ? (GitLogs) new GitLogs.Unavailable('no git commits found')
+                        : (GitLogs) new GitLogs.Available(logText)
+                }
+            )
     }
 
 }

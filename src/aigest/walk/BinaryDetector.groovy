@@ -31,7 +31,8 @@ final class BinaryDetector {
                 suspiciousBytes++
             }
         }
-        return ((double) suspiciousBytes / (double) limit) > 0.30d
+
+        ((double) suspiciousBytes / (double) limit) > 0.30d
     }
 
     static boolean isBinaryFile(Path file) {

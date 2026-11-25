@@ -32,7 +32,7 @@ final class RegexSet {
     }
 
     boolean isEmpty() {
-        return patterns.isEmpty()
+        patterns.isEmpty()
     }
 
     boolean matchesAny(String candidate) {

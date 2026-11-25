@@ -91,12 +91,40 @@ The one at the root of your repo has a higher hierarchy than the one as a dotfil
 
 ### Configuration Reference
 
-| Key        | Type      | Default | Description                                                                                                              |
-| ---------- | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `override` | `boolean` | `false` | When true in a repository `aigest.json`, discards the entire global config (both global base rules and global profiles). |
-| `ext`      | `object`  | `{}`    | Rules keyed by file extension.                                                                                           |
-| `dir`      | `object`  | `{}`    | Rules keyed by repository-relative directory path.                                                                       |
-| `profiles` | `object`  | `{}`    | Named rule sets that can be selected on the CLI.                                                                         |
+| Key           | Type      | Default | Description                                                                                                              |
+| ------------- | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `override`    | `boolean` | `false` | When true in a repository `aigest.json`, discards the entire global config (both global base rules and global profiles). |
+| `includeOnly` | `object`  | `{}`    | Allowlist of specific files or directories. When active, takes precedence over `.gitignore`, `dir`, and `ext` rules.     |
+| `ext`         | `object`  | `{}`    | Rules keyed by file extension.                                                                                           |
+| `dir`         | `object`  | `{}`    | Rules keyed by repository-relative directory path.                                                                       |
+| `profiles`    | `object`  | `{}`    | Named rule sets that can be selected on the CLI.                                                                         |
+
+#### Include-Only Rules
+
+`includeOnly` restricts ingestion to an explicit allowlist of repository-relative paths. Paths are normalized the same way as `dir` keys: backslashes are converted to `/`, leading `./` or `/` and trailing `/` are stripped, and `"."` normalizes to `""` (the repository root).
+
+| Key     | Type       | Description                                                                                                                                                                                                      |
+| ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `files` | `string[]` | Exact repository-relative file paths to include. When non-empty, **takes precedence over `dirs`** and bypasses all ignore rules (`.gitignore`, `dir`, and `ext`).                                                |
+| `dirs`  | `string[]` | Repository-relative directory paths to include recursively. Used only when `files` is empty or omitted. Bypasses all ignore rules (`.gitignore`, `dir`, and `ext`). Use `"."` or `""` for the entire repository. |
+
+When an `includeOnly` rule is active (either `files` or `dirs` is non-empty):
+
+- All `.gitignore`, `dir`, and `ext` ignore rules are ignored.
+- Hardcoded `.git` directory skipping, output file self-exclusion, and binary file detection still apply.
+- If both `files` and `dirs` are specified, `files` wins and `dirs` is ignored.
+- Across config layers (global base, global profile, repo base/profile), a higher-precedence active `includeOnly` replaces a lower-precedence one.
+
+Example:
+
+```JSON
+"includeOnly": {
+    "dirs": ["src/aigest/rules", "nix"],
+    "files": ["README.md", "src/aigest/Main.groovy"]
+}
+```
+
+_(In the example above, only `README.md` and `src/aigest/Main.groovy` are included because `files` takes precedence over `dirs`.)_
 
 #### Extension Rules
 
@@ -187,10 +215,13 @@ Example:
         }
     },
     "docs-only": {
-        "override": true,
-        "dir": {
-            ".": { "ignore": true },
-            "docs": {}
+        "includeOnly": {
+            "dirs": ["docs"]
+        }
+    },
+    "entrypoints": {
+        "includeOnly": {
+            "files": ["README.md", "src/aigest/Main.groovy"]
         }
     }
 }
@@ -225,10 +256,13 @@ Example:
     },
     "profiles": {
         "minimal": {
-            "override": true,
-            "dir": {
-                ".": { "ignore": true },
-                "src/core": {}
+            "includeOnly": {
+                "dirs": ["src/core"]
+            }
+        },
+        "focus": {
+            "includeOnly": {
+                "files": ["src/core/Main.groovy", "README.md"]
             }
         }
     }
@@ -254,7 +288,7 @@ If the repository the `aigest.json` file sets `"override": true` at the top leve
 | `aigest <name>` (profile exists in repo) | `repoProfile.override: false`   | Global Base → Global Profile (if any) → Repo Profile |
 | `aigest <name>` (profile only in global) | `globalProfile.override: true`  | Global Profile only                                  |
 | `aigest <name>` (profile only in global) | `globalProfile.override: false` | Global Base → Global Profile                         |
-| `aigest <name>` (not found in either)    | —                               | Error (exits with status `1`)                        |
+| `aigest <name>` (not found in either)    | -                               | Error (exits with status `1`)                        |
 
 The top-level `ext` and `dir` rules (base repo file) are only used when running without a profile (`main`).
 Unless given rules say otherwise.
@@ -264,17 +298,19 @@ Pipeline:
 ```md
 1. Hardcoded .git skip
 
-2. Root .gitignore filter
+2. includeOnly gate (if active: files > dirs; bypasses steps 3-6)
 
-3. dir rules (directory pruning & nested re-inclusion)
+3. Root .gitignore filter (skipped if includeOnly is active)
 
-4. dir rules (file-level matching with DirIgnore barrier)
+4. dir rules (directory pruning & nested re-inclusion; skipped if includeOnly is active)
 
-5. ext rules (extension-level matching)
+5. dir rules (file-level matching with DirIgnore barrier; skipped if includeOnly is active)
 
-6. Output file self-exclusion
+6. ext rules (extension-level matching; skipped if includeOnly is active)
 
-7. Binary file detection (kept in tree, omitted from <files>)
+7. Output file self-exclusion
+
+8. Binary file detection (kept in tree, omitted from <files>)
 ```
 
 ## Output Format

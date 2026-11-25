@@ -26,6 +26,8 @@ final class FileWalker {
         return Result.<List<Path>>trying("walking ${repoRoot}") {
             List<Path> collected = new ArrayList<>()
 
+            boolean useGitIgnore = !rules.hasIncludeOnly()
+
             Files.walkFileTree(repoRoot, new SimpleFileVisitor<Path>() {
 
                 @Override
@@ -36,16 +38,18 @@ final class FileWalker {
                         return FileVisitResult.CONTINUE
                     }
 
-
                     if (dir.fileName != null && dir.fileName.toString() == '.git') {
                         return FileVisitResult.SKIP_SUBTREE
                     }
-                    if (gitignore.isIgnored(rel + '/dummy')) {
+
+                    if (useGitIgnore && gitignore.isIgnored(rel + '/dummy')) {
                         return FileVisitResult.SKIP_SUBTREE
                     }
+
                     if (rules.shouldSkipDirectory(rel)) {
                         return FileVisitResult.SKIP_SUBTREE
                     }
+
                     return FileVisitResult.CONTINUE
                 }
 
@@ -54,7 +58,8 @@ final class FileWalker {
                     if (!attrs.isRegularFile()) return FileVisitResult.CONTINUE
 
                     String rel = PathUtils.toNormalizedRelative(repoRoot, file)
-                    if (gitignore.isIgnored(rel)) return FileVisitResult.CONTINUE
+
+                    if (useGitIgnore && gitignore.isIgnored(rel)) return FileVisitResult.CONTINUE
                     if (rules.shouldIgnoreFile(rel)) return FileVisitResult.CONTINUE
 
                     collected.add(file)
@@ -73,7 +78,7 @@ final class FileWalker {
                 PathUtils.toNormalizedRelative(repoRoot, b)
             }
 
-            return Collections.unmodifiableList(collected)
+            Collections.unmodifiableList(collected)
         }
     }
 

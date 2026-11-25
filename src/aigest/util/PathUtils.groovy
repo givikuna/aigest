@@ -30,29 +30,34 @@ final class PathUtils {
     }
 
     static String normalizeExt(String rawExt) {
-        if (rawExt == null) return ''
-        String trimmed = rawExt.trim().toLowerCase(Locale.ROOT)
-        trimmed.startsWith('.') ? trimmed.substring(1) : trimmed
+        rawExt?.trim()?.toLowerCase(Locale.ROOT)?.replaceFirst(/^\./, '') ?: ''
     }
 
     static String fileNameOf(String normalizedRelPath) {
-        if (normalizedRelPath == null || normalizedRelPath.isEmpty()) return ''
-        int lastSlash = normalizedRelPath.lastIndexOf('/')
-        lastSlash >= 0 ? normalizedRelPath.substring(lastSlash + 1) : normalizedRelPath
+        !normalizedRelPath
+            ? ''
+            : (normalizedRelPath.lastIndexOf('/').with {
+                    it >= 0
+                    ? normalizedRelPath.substring(it + 1)
+                    : normalizedRelPath
+                })
     }
 
     static String extractExt(String fileName) {
-        if (fileName == null || fileName.isEmpty()) return ''
-        int dot = fileName.lastIndexOf('.')
-        (dot <= 0 || dot == fileName.length() - 1)
+        (fileName == null || fileName.isEmpty())
             ? ''
-            : fileName.substring(dot + 1).toLowerCase(Locale.ROOT)
+            : fileName.lastIndexOf('.').with { dot ->
+                (dot <= 0 || dot == fileName.length() - 1)
+                    ? ''
+                    : fileName.substring(dot + 1).toLowerCase(Locale.ROOT)
+            }
     }
 
     static boolean isInsideDir(String normalizedRelPath, String normalizedDirKey) {
-        if (normalizedDirKey.isEmpty()) return true
-        normalizedRelPath == normalizedDirKey ||
-            normalizedRelPath.startsWith(normalizedDirKey + '/')
+        normalizedDirKey.isEmpty()
+            ? true
+            : (normalizedRelPath == normalizedDirKey
+                ||  normalizedRelPath.startsWith(normalizedDirKey + '/'))
     }
 
     static int relativeDepthInDir(String normalizedFileRelPath, String normalizedDirKey) {

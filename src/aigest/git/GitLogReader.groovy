@@ -15,7 +15,7 @@ final class GitLogReader {
     private GitLogReader() { }
 
     static Result<String, String> read(Path repoRoot) {
-        return read(repoRoot, DEFAULT_LIMIT)
+        read(repoRoot, DEFAULT_LIMIT)
     }
 
     static Result<String, String> read(Path repoRoot, int limit) {
@@ -30,11 +30,13 @@ final class GitLogReader {
 
             String stdout = proc.inputStream.getText(StandardCharsets.UTF_8.name())
             String stderr = proc.errorStream.getText(StandardCharsets.UTF_8.name())
+
             int code = proc.waitFor()
 
             if (code != 0) {
                 throw new IOException("git log exited ${code}: ${stderr.trim()}")
             }
+
             return stdout.trim()
         }
     }
