@@ -292,7 +292,10 @@ final class Ingestor {
         ResolvedConfig resolved
     ) {
         RuleEngine rules = RuleEngine.fromConfig(resolved)
-        GitIgnoreFilter gitignore = GitIgnoreFilter.load(repoRoot)
+
+        GitIgnoreFilter gitignore = rules.hasIncludeOnly()
+            ? GitIgnoreFilter.EMPTY
+            : GitIgnoreFilter.load(repoRoot)
         Path normalizedOutput = outputFile.toAbsolutePath().normalize()
 
         FileWalker.collect(repoRoot, rules, gitignore).flatMap { List<Path> paths ->

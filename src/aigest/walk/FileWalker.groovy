@@ -23,8 +23,10 @@ final class FileWalker {
         RuleEngine rules,
         GitIgnoreFilter gitignore
     ) {
-        Result.<List<Path>>trying("walking ${repoRoot}") {
+        return Result.<List<Path>>trying("walking ${repoRoot}") {
             List<Path> collected = new ArrayList<>()
+
+            boolean useGitIgnore = !rules.hasIncludeOnly()
 
             Files.walkFileTree(repoRoot, new SimpleFileVisitor<Path>() {
 
@@ -36,18 +38,19 @@ final class FileWalker {
                         return FileVisitResult.CONTINUE
                     }
 
-
                     if (dir.fileName != null && dir.fileName.toString() == '.git') {
                         return FileVisitResult.SKIP_SUBTREE
                     }
-                    if (gitignore.isIgnored(rel + '/dummy')) {
+
+                    if (useGitIgnore && gitignore.isIgnored(rel + '/dummy')) {
                         return FileVisitResult.SKIP_SUBTREE
                     }
+
                     if (rules.shouldSkipDirectory(rel)) {
                         return FileVisitResult.SKIP_SUBTREE
                     }
 
-                    FileVisitResult.CONTINUE
+                    return FileVisitResult.CONTINUE
                 }
 
                 @Override
@@ -55,17 +58,17 @@ final class FileWalker {
                     if (!attrs.isRegularFile()) return FileVisitResult.CONTINUE
 
                     String rel = PathUtils.toNormalizedRelative(repoRoot, file)
-                    if (gitignore.isIgnored(rel)) return FileVisitResult.CONTINUE
+
+                    if (useGitIgnore && gitignore.isIgnored(rel)) return FileVisitResult.CONTINUE
                     if (rules.shouldIgnoreFile(rel)) return FileVisitResult.CONTINUE
 
                     collected.add(file)
-
-                    FileVisitResult.CONTINUE
+                    return FileVisitResult.CONTINUE
                 }
 
                 @Override
                 FileVisitResult visitFileFailed(Path file, IOException exc) {
-                    FileVisitResult.CONTINUE
+                    return FileVisitResult.CONTINUE
                 }
 
             })
