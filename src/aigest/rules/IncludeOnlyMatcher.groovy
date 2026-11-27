@@ -26,11 +26,6 @@ final class IncludeOnlyMatcher {
                 }
             }
 
-            // files > dirs
-            if (!normFiles.isEmpty()) {
-                return new FilesOnly(normFiles)
-            }
-
             Set<String> normDirs = new LinkedHashSet<String>()
             if (dirs != null) {
                 for (String d : dirs) {
@@ -40,11 +35,11 @@ final class IncludeOnlyMatcher {
                 }
             }
 
-            if (!normDirs.isEmpty()) {
-                return new DirsOnly(normDirs)
+            if (normDirs.isEmpty() && normFiles.isEmpty()) {
+                return None.INSTANCE
             }
 
-            None.INSTANCE
+            new Active(normDirs, normFiles)
         }
 
         abstract boolean isActive()
@@ -76,41 +71,13 @@ final class IncludeOnlyMatcher {
 
         }
 
-        static final class DirsOnly extends IncludeOnlyRule {
+        static final class Active extends IncludeOnlyRule {
 
             final Set<String> dirs
-
-            DirsOnly(Set<String> dirs) {
-                this.dirs = Collections.unmodifiableSet(new LinkedHashSet<String>(dirs))
-            }
-
-            @Override
-            boolean isActive() {
-                true
-            }
-
-            @Override
-            boolean shouldSkipDirectory(String normalizedDirRelPath) {
-                !dirs.any { String incDir ->
-                    PathUtils.isInsideDir(normalizedDirRelPath, incDir) ||
-                        PathUtils.isInsideDir(incDir, normalizedDirRelPath)
-                }
-            }
-
-            @Override
-            boolean shouldIncludeFile(String normalizedFileRelPath) {
-                dirs.any { String incDir ->
-                    incDir.isEmpty() || normalizedFileRelPath.startsWith(incDir + '/')
-                }
-            }
-
-        }
-
-        static final class FilesOnly extends IncludeOnlyRule {
-
             final Set<String> files
 
-            FilesOnly(Set<String> files) {
+            Active(Set<String> dirs, Set<String> files) {
+                this.dirs = Collections.unmodifiableSet(new LinkedHashSet<String>(dirs))
                 this.files = Collections.unmodifiableSet(new LinkedHashSet<String>(files))
             }
 
@@ -121,16 +88,30 @@ final class IncludeOnlyMatcher {
 
             @Override
             boolean shouldSkipDirectory(String normalizedDirRelPath) {
-                normalizedDirRelPath.isEmpty()
-                    ? false
-                    : !files.any { String incFile ->
-                        incFile.startsWith(normalizedDirRelPath + '/')
-                    }
+                if (normalizedDirRelPath.isEmpty()) {
+                    return false
+                }
+
+                boolean matchesDir = dirs.any { String incDir ->
+                    PathUtils.isInsideDir(normalizedDirRelPath, incDir) ||
+                        PathUtils.isInsideDir(incDir, normalizedDirRelPath)
+                }
+
+                if (matchesDir) {
+                    return false
+                }
+
+                !files.any { String incFile ->
+                    incFile.startsWith(normalizedDirRelPath + '/')
+                }
             }
 
             @Override
             boolean shouldIncludeFile(String normalizedFileRelPath) {
-                files.contains(normalizedFileRelPath)
+                files.contains(normalizedFileRelPath) ||
+                    dirs.any { String incDir ->
+                        incDir.isEmpty() || normalizedFileRelPath.startsWith(incDir + '/')
+                    }
             }
 
         }

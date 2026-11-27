@@ -103,10 +103,10 @@ The one at the root of your repo has a higher hierarchy than the one as a dotfil
 
 `includeOnly` restricts ingestion to an explicit allowlist of repository-relative paths. Paths are normalized the same way as `dir` keys: backslashes are converted to `/`, leading `./` or `/` and trailing `/` are stripped, and `"."` normalizes to `""` (the repository root).
 
-| Key     | Type       | Description                                                                                                                                                                                                      |
-| ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `files` | `string[]` | Exact repository-relative file paths to include. When non-empty, **takes precedence over `dirs`** and bypasses all ignore rules (`.gitignore`, `dir`, and `ext`).                                                |
-| `dirs`  | `string[]` | Repository-relative directory paths to include recursively. Used only when `files` is empty or omitted. Bypasses all ignore rules (`.gitignore`, `dir`, and `ext`). Use `"."` or `""` for the entire repository. |
+| Key     | Type       | Description                                                                                                                                                                                               |
+| ------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `files` | `string[]` | Exact repository-relative file paths to include. When non-empty, **takes precedence over `dirs`** and bypasses all ignore rules, it merges with `dirs` if `dirs` exists (`.gitignore`, `dir`, and `ext`). |
+| `dirs`  | `string[]` | Repository-relative directory paths to include recursively. Bypasses all ignore rules (`.gitignore`, `dir`, and `ext`). Use `"."` or `""` for the entire repository.                                      |
 
 When an `includeOnly` rule is active (either `files` or `dirs` is non-empty):
 
